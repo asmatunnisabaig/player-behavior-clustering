@@ -21,4 +21,4 @@ A browser-based survival game paired with a live machine learning pipeline that 
 ## What this demonstrates
 - End-to-end data pipeline: raw event data → database → ML model → live dashboard
 - Unsupervised learning applied to behavioral/gameplay data
-- Full-stack integration across JavaScript, Python, and a cloud database
+- Full-stack integration across JavaScript, Python, and a cloud databasey
