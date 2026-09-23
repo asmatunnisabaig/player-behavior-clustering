@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Survival Arena</title>
+  <style>
+    body { margin: 0; background: #111; display: flex; justify-content: center; }
+    canvas { background: #222; display: block; margin-top: 20px; }
+  </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <canvas id="gameCanvas" width="600" height="400"></canvas>
+  <script>
+
+const SUPABASE_URL = "https://ytemypogbyqfzsklmvbk.supabase.co";
+const SUPABASE_KEY = "sb_publishable_X2FrVLll9yB1YnC8-sPJ0A_GJMy9uyy";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const MAX_OBSTACLES = 12;
+let lastSpawnTime = Date.now();
+
+async function sendResults(survivalTime) {
+  await supabaseClient.from("sessions").insert([
+    { survival_time: survivalTime, distance_moved: distanceMoved, damage_taken: 1 }
+  ]);
+}
+
+const canvas = document.getElementById("gameCanvas");
+canvas.setAttribute("tabindex", "0");
+window.addEventListener("load", () => canvas.focus());
+const ctx = canvas.getContext("2d");
+
+let gameStarted = false;
+let player = { x: 300, y: 200, size: 20, speed: 4 };
+let keys = {};
+
+document.addEventListener("keydown", (e) => {
+  if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key)) e.preventDefault();
+  keys[e.key] = true;
+  if (e.key === "s" && !gameStarted) { gameStarted = true; startTime = Date.now(); }
+  if (e.key === "r" && gameOver) resetGame();
+});
+document.addEventListener("keyup", (e) => keys[e.key] = false);
+
+function update() {
+  if (gameOver) return;
+  if (!gameStarted) return;
+  if (keys["ArrowUp"]) { player.y -= player.speed; distanceMoved += player.speed; }
+  if (keys["ArrowDown"]) { player.y += player.speed; distanceMoved += player.speed; }
+  if (keys["ArrowLeft"]) { player.x -= player.speed; distanceMoved += player.speed; }
+  if (keys["ArrowRight"]) { player.x += player.speed; distanceMoved += player.speed; }
+  if (player.x > canvas.width) player.x = 0;
+  if (player.x < 0) player.x = canvas.width;
+  if (player.y > canvas.height) player.y = 0;
+  if (player.y < 0) player.y = canvas.height;
+
+  if (!gameOver && obstacles.length < MAX_OBSTACLES && Date.now() - lastSpawnTime > 5000) {
+    const edge = Math.floor(Math.random() * 4);
+    let x, y;
+    if (edge === 0) { x = Math.random() * canvas.width; y = 0; }
+    else if (edge === 1) { x = canvas.width; y = Math.random() * canvas.height; }
+    else if (edge === 2) { x = Math.random() * canvas.width; y = canvas.height; }
+    else { x = 0; y = Math.random() * canvas.height; }
+
+    const distFromPlayer = Math.hypot(x - player.x, y - player.y);
+    if (distFromPlayer > 100) {
+      obstacles.push({
+        x: x, y: y, size: 20,
+        dx: (Math.random() - 0.5) * 3,
+        dy: (Math.random() - 0.5) * 3
+      });
+      lastSpawnTime = Date.now();
+    }
+  }
+
+  obstacles.forEach(o => {
+    const speedMultiplier = 1 + (Date.now() - startTime) / 20000;
+    o.x += o.dx * speedMultiplier;
+    o.y += o.dy * speedMultiplier;
+    if (o.x < 0 || o.x > canvas.width) o.dx *= -1;
+    if (o.y < 0 || o.y > canvas.height) o.dy *= -1;
+
+    const dist = Math.hypot(player.x - o.x, player.y - o.y);
+    if (dist < player.size && !gameOver) {
+      gameOver = true;
+      endTime = Date.now();
+      sendResults((endTime - startTime) / 1000);
+    }
+  });
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "lime";
+  ctx.fillRect(player.x, player.y, player.size, player.size);
+
+  ctx.fillStyle = "red";
+  obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.size, o.size));
+
+  ctx.fillStyle = "white";
+  ctx.font = "16px Arial";
+  const now = gameOver ? endTime : Date.now();
+  const survived = gameStarted ? ((now - startTime) / 1000).toFixed(1) : "0.0";
+  ctx.fillText(gameOver ? "GAME OVER - Survived: " + survived + "s" : "Time: " + survived + "s", 10, 20)
+  if (!gameStarted) {
+  ctx.fillText("Press S to Start", 10, 40);
+};
+  if (gameOver) {
+  ctx.fillText("Press R to restart", 10, 40);
+}
+}
+
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+let obstacles = [];
+let startTime = Date.now();
+let gameOver = false;
+let endTime = null;
+let distanceMoved = 0;
+
+for (let i = 0; i < 5; i++) {
+  obstacles.push({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    size: 20,
+    dx: (Math.random() - 0.5) * 3,
+    dy: (Math.random() - 0.5) * 3
+  });
+}
+gameLoop();
+
+function resetGame() {
+  gameStarted = false;
+  player.x = 300;
+  player.y = 200;
+  distanceMoved = 0;
+  startTime = Date.now();
+  endTime = null;
+  gameOver = false;
+  gameStarted = true;
+  obstacles = obstacles.slice(0, 5);
+obstacles.forEach(o => {
+  o.x = Math.random() * canvas.width;
+  o.y = Math.random() * canvas.height;
+});
+lastSpawnTime = Date.now();
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "r" && gameOver) resetGame();
+});
+
+</script>
+</body>
+</html>
