@@ -24,16 +24,21 @@ df = pd.DataFrame(response.data)
 if not df.empty:
     st.metric("Longest survival time ever", f"{df['survival_time'].max():.1f}s")
 
-    if len(df) >= 3:
-        features = df[["survival_time", "distance_moved"]]
+    df_model = df.dropna(subset=["avg_speed"]).copy()
+
+    if len(df_model) >= 4:
+        features = df_model[["survival_time", "avg_speed"]]
         scaled = StandardScaler().fit_transform(features)
         kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
-        df["cluster"] = kmeans.fit_predict(scaled)
+        df_model["cluster"] = kmeans.fit_predict(scaled)
 
-        cluster_order = df.groupby("cluster")["survival_time"].mean().sort_values().index.tolist()
+        score = silhouette_score(scaled, df_model["cluster"])
+        st.caption(f"Cluster quality (silhouette score): {score:.2f}")
+
+        cluster_order = df_model.groupby("cluster")["survival_time"].mean().sort_values().index.tolist()
         labels = {cluster_order[0]: "Quick Faller", cluster_order[1]: "Balanced Player", cluster_order[2]: "Long Survivor"}
-        df["playstyle"] = df["cluster"].map(labels)
+        df_model["playstyle"] = df_model["cluster"].map(labels)
 
-        st.metric("This round's playstyle", df.iloc[-1]["playstyle"])
+        st.metric("This round's playstyle", df_model.iloc[-1]["playstyle"])
 else:
     st.info("Play your first round!")
