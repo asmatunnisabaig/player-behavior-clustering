@@ -5,6 +5,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 import streamlit.components.v1 as components
 from streamlit_autorefresh import st_autorefresh
+from sklearn.metrics import silhouette_score
 
 SUPABASE_URL = "https://ytemypogbyqfzsklmvbk.supabase.co"
 SUPABASE_KEY = "sb_publishable_X2FrVLll9yB1YnC8-sPJ0A_GJMy9uyy"

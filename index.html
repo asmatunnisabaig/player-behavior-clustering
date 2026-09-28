@@ -20,8 +20,9 @@ const MAX_OBSTACLES = 12;
 let lastSpawnTime = Date.now();
 
 async function sendResults(survivalTime) {
+  const avgSpeed = distanceMoved / survivalTime;
   await supabaseClient.from("sessions").insert([
-    { survival_time: survivalTime, distance_moved: distanceMoved, damage_taken: 1 }
+    { survival_time: survivalTime, distance_moved: distanceMoved, damage_taken: 1, avg_speed: avgSpeed }
   ]);
 }
 
